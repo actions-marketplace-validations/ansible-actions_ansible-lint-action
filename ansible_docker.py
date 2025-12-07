@@ -59,35 +59,73 @@ if __name__ == "__main__":
     ENV_TARGET_NAME = "TARGET"
     ENV_REQUIRED_COLLECTION_NAME = "REQCOLLECTIONS"
     ENV_REQUIRED_ROLE_NAME = "REROLE"
+    ENV_PIPPACKAGE_NAME = "PIPPACKAGE"
+    ENV_PIPPACKAGE_TXT_NAME = "PIPPACKAGETXT"
+    ENV_COLLECTIONS_YML_NAME = "COLLECTIONSYML"
 
-    # check for target variable
+    # check for TARGET variable
     env_target = EnvironmentManager(ENV_TARGET_NAME)
-    target = env_target.check_required_environment_variable()
+    TARGET = env_target.check_required_environment_variable()
+    if TARGET == "":
+        print("Target needs to be defined")
+        sys.exit(1)
 
     # check for required collection variable
     env_collection = EnvironmentManager(ENV_REQUIRED_COLLECTION_NAME)
     reqired_collection = env_collection.check_optional_environment_variable()
 
+    # check for required collection variable
+    env_collection_yml = EnvironmentManager(ENV_COLLECTIONS_YML_NAME)
+    reqired_collection_yml = env_collection_yml.check_optional_environment_variable()
+
     # check for required role variable
     env_role = EnvironmentManager(ENV_REQUIRED_ROLE_NAME)
     reqired_role = env_role.check_optional_environment_variable()
 
-    # run ansible commands
-    ansible_version_checker = AnsibleCommandExecution()
+    # check for install pip packages variable
+    env_pip = EnvironmentManager(ENV_PIPPACKAGE_NAME)
+    pip_pkg = env_pip.check_optional_environment_variable()
 
-    # Optionally install required ansible collections
+    # check for install packages.txt variable
+    env_pip_txt = EnvironmentManager(ENV_PIPPACKAGE_TXT_NAME)
+    pip_pkg_txt = env_pip_txt.check_optional_environment_variable()
+
+    # execute ansible commands
+    execute = AnsibleCommandExecution()
+
+    # Optionally install required ansible collections directly
     if bool(reqired_collection):
-        ansible_command = ["ansible-galaxy", "collection", "install",
+        collection_install_command = ["ansible-galaxy", "collection", "install",
                           f"{reqired_collection}", "--upgrade"]
-        version_info = ansible_version_checker.run_command(ansible_command)
-        print(f"COLLECTION INSTALL SUCCESSFUL\n{version_info}")
+        collection_install_info = execute.run_command(collection_install_command)
+        print(f"{collection_install_info}\nSINGLE COLLECTION INSTALL SUCCESSFUL")
+
+    # Optionally install required ansible collections from yml file
+    if bool(reqired_collection_yml):
+        collections_install_command = ["ansible-galaxy", "install", "--role-file",
+                          f"{reqired_collection_yml}", "--force"]
+        collections_install_info = execute.run_command(collections_install_command)
+        print(f"{collections_install_info}\nCOLLECTION.YML INSTALL SUCCESSFUL")
 
     # Optionally install required ansible roles
     if  bool(reqired_role):
-        ansible_command = ["ansible-galaxy", "role", "install", f"{reqired_role}", "--upgrade"]
-        version_info = ansible_version_checker.run_command(ansible_command)
-        print(f"ROLE INSTALL SUCCESSFUL\n{version_info}")
+        role_install_command = ["ansible-galaxy", "role", "install", f"{reqired_role}", "--force"]
+        role_install_info = execute.run_command(role_install_command)
+        print(f"{role_install_info}\nSINGLE ROLE INSTALL SUCCESSFUL")
+
+    # Optionally install pip package directly
+    if  bool(pip_pkg):
+        pip_install_command = ["pip", "install", "--upgrade", f"{pip_pkg}"]
+        pip_install_info = execute.run_command(pip_install_command)
+        print(f"{pip_install_info}\nPIP PACKAGE INSTALL SUCCESSFUL")
+
+    # Optionally install pip package from file
+    if  bool(pip_pkg_txt):
+        pip_requirements_command = ["pip", "install", "--upgrade", "-r",  f"{pip_pkg_txt}"]
+        pip_requirements_info = execute.run_command(pip_requirements_command)
+        print(f"{pip_requirements_info}\nPIP PACKAGE.TXT INSTALL SUCCESSFUL")
 
     # run ansible lint
-    ansible_command = ["ansible-lint", f"{target}"]
-    version_info = ansible_version_checker.run_command(ansible_command)
+    ansible_command = ["ansible-lint", f"{TARGET}"]
+    linter_run = execute.run_command(ansible_command)
+    print(f"---start+linter---\n{linter_run}\nAnsible run successful\n---end+linter---")
